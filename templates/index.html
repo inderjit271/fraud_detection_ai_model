@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XposeAI - Fraud Detection Dashboard</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Plotly.js -->
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <!-- Custom CSS -->
+    <link href="/static/css/style.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="#">
+                <i class="bi bi-shield-check"></i> XposeAI
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <span class="navbar-text">Fraud Detection Dashboard</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <div class="container-fluid py-4">
+        <!-- Status Bar -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body py-2">
+                        <div class="row text-center">
+                            <div class="col">
+                                <span id="status-data" class="badge bg-secondary">
+                                    <i class="bi bi-database"></i> No Data
+                                </span>
+                            </div>
+                            <div class="col">
+                                <span id="status-model" class="badge bg-secondary">
+                                    <i class="bi bi-cpu"></i> No Model
+                                </span>
+                            </div>
+                            <div class="col">
+                                <span id="status-analysis" class="badge bg-secondary">
+                                    <i class="bi bi-graph-up"></i> No Analysis
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-lg-3">
+                <div class="card border-0 shadow-sm sticky-top">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0"><i class="bi bi-list"></i> Dashboard Sections</h6>
+                    </div>
+                    <div class="list-group list-group-flush">
+                        <a href="#upload-section" class="list-group-item list-group-item-action active" data-section="upload">
+                            <i class="bi bi-cloud-upload"></i> Data Upload & Preview
+                        </a>
+                        <a href="#analysis-section" class="list-group-item list-group-item-action" data-section="analysis">
+                            <i class="bi bi-graph-up"></i> Analysis Results
+                        </a>
+                        <a href="#model-section" class="list-group-item list-group-item-action" data-section="model">
+                            <i class="bi bi-cpu"></i> Model Training
+                        </a>
+                        <a href="#synthetic-section" class="list-group-item list-group-item-action" data-section="synthetic">
+                            <i class="bi bi-magic"></i> Synthetic Data
+                        </a>
+                        <a href="#predictions-section" class="list-group-item list-group-item-action" data-section="predictions">
+                            <i class="bi bi-bullseye"></i> Predictions
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-lg-9">
+                <!-- Upload Section -->
+                <div id="upload-section" class="content-section">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0"><i class="bi bi-cloud-upload"></i> Data Upload & Preview</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <div class="upload-zone border-2 border-dashed border-primary rounded p-4 text-center mb-4" id="upload-zone">
+                                        <i class="bi bi-cloud-upload display-4 text-primary mb-3"></i>
+                                        <h6>Drop CSV file here or click to browse</h6>
+                                        <p class="text-muted small">Supports credit card, mobile money, debit card transactions</p>
+                                        <input type="file" id="file-input" accept=".csv" class="d-none">
+                                        <button type="button" class="btn btn-primary" onclick="document.getElementById('file-input').click()">
+                                            Choose File
+                                        </button>
+                                    </div>
+                                    
+                                    <!-- Upload Progress -->
+                                    <div id="upload-progress" class="d-none">
+                                        <div class="progress mb-3">
+                                            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar"></div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Column Mapping -->
+                                    <div id="column-mapping" class="d-none">
+                                        <h6>Column Mapping</h6>
+                                        <div id="mapping-controls"></div>
+                                        <button type="button" class="btn btn-success mt-3" id="analyze-btn" disabled>
+                                            <i class="bi bi-play-circle"></i> Analyze Data
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-4">
+                                    <div class="card border-0 bg-light">
+                                        <div class="card-body">
+                                            <h6><i class="bi bi-info-circle"></i> Data Format Info</h6>
+                                            <div class="small text-muted">
+                                                <strong>Required:</strong>
+                                                <ul class="mt-1">
+                                                    <li>Amount (numeric)</li>
+                                                    <li>Fraud Label (0/1, True/False)</li>
+                                                </ul>
+                                                <strong>Optional:</strong>
+                                                <ul class="mt-1">
+                                                    <li>Timestamp</li>
+                                                    <li>Merchant/Location</li>
+                                                    <li>Card Type, User ID</li>
+                                                </ul>
+                                                <strong>Limits:</strong>
+                                                <ul class="mt-1">
+                                                    <li>Max file size: 50MB</li>
+                                                    <li>CSV format only</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Data Preview -->
+                            <div id="data-preview" class="d-none">
+                                <hr>
+                                <h6>Data Preview</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-striped" id="preview-table">
+                                        <thead class="table-dark"></thead>
+                                        <tbody></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Analysis Section -->
+                <div id="analysis-section" class="content-section d-none">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0"><i class="bi bi-graph-up"></i> Analysis Results</h5>
+                        </div>
+                        <div class="card-body">
+                            <!-- Metrics Cards -->
+                            <div class="row mb-4" id="metrics-cards">
+                                <div class="col-md-3">
+                                    <div class="card border-0 bg-primary text-white">
+                                        <div class="card-body text-center">
+                                            <h3 id="total-transactions">-</h3>
+                                            <small>Total Transactions</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card border-0 bg-danger text-white">
+                                        <div class="card-body text-center">
+                                            <h3 id="fraud-transactions">-</h3>
+                                            <small>Fraud Transactions</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card border-0 bg-warning text-white">
+                                        <div class="card-body text-center">
+                                            <h3 id="fraud-rate">-</h3>
+                                            <small>Fraud Rate (%)</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card border-0 bg-info text-white">
+                                        <div class="card-body text-center">
+                                            <h3 id="avg-fraud-amount">-</h3>
+                                            <small>Avg Fraud Amount</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Charts -->
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="card border-0">
+                                        <div class="card-body">
+                                            <div id="fraud-distribution-chart"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card border-0">
+                                        <div class="card-body">
+                                            <div id="amount-distribution-chart"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Fraud Transactions Table -->
+                            <div class="mt-4" id="fraud-table-section">
+                                <h6><i class="bi bi-exclamation-triangle text-danger"></i> Detected Fraud Transactions</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-striped" id="fraud-table">
+                                        <thead class="table-danger"></thead>
+                                        <tbody></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Model Training Section -->
+                <div id="model-section" class="content-section d-none">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-warning text-dark">
+                            <h5 class="mb-0"><i class="bi bi-cpu"></i> Model Training</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6>Model Options</h6>
+                                    <div class="btn-group w-100 mb-3" role="group">
+                                        <input type="radio" class="btn-check" name="model-option" id="pretrained-option" checked>
+                                        <label class="btn btn-outline-primary" for="pretrained-option">Use Pretrained</label>
+                                        
+                                        <input type="radio" class="btn-check" name="model-option" id="train-new-option">
+                                        <label class="btn btn-outline-primary" for="train-new-option">Train New</label>
+                                    </div>
+                                    
+                                    <!-- Pretrained Model -->
+                                    <div id="pretrained-section">
+                                        <p class="text-muted small">Load pretrained fraud detection model trained on multiple transaction types.</p>
+                                        <button type="button" class="btn btn-primary" id="load-pretrained-btn">
+                                            <i class="bi bi-download"></i> Load Pretrained Model
+                                        </button>
+                                    </div>
+                                    
+                                    <!-- Training Configuration -->
+                                    <div id="training-section" class="d-none">
+                                        <div class="row mb-3">
+                                            <div class="col-md-6">
+                                                <label class="form-label">Algorithm</label>
+                                                <select class="form-select" id="algorithm-select">
+                                                    <option value="Random Forest">Random Forest</option>
+                                                    <option value="XGBoost">XGBoost</option>
+                                                    <option value="Logistic Regression">Logistic Regression</option>
+                                                    <option value="SVM">Support Vector Machine</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label">Test Size</label>
+                                                <input type="range" class="form-range" min="0.1" max="0.5" step="0.05" value="0.2" id="test-size-range">
+                                                <small class="text-muted">Value: <span id="test-size-value">0.2</span></small>
+                                            </div>
+                                        </div>
+                                        <div class="row mb-3">
+                                            <div class="col-md-6">
+                                                <label class="form-label">Random State</label>
+                                                <input type="number" class="form-control" value="42" id="random-state">
+                                            </div>
+                                            <div class="col-md-6 d-flex align-items-end">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" checked id="cross-validation">
+                                                    <label class="form-check-label" for="cross-validation">
+                                                        Cross Validation
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <button type="button" class="btn btn-success" id="train-model-btn">
+                                            <i class="bi bi-play-circle"></i> Start Training
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <!-- Model Status -->
+                                    <div class="card border-0 bg-light" id="model-status">
+                                        <div class="card-body">
+                                            <h6><i class="bi bi-info-circle"></i> Model Status</h6>
+                                            <p class="text-muted" id="model-status-text">No model loaded</p>
+                                            <div id="model-metrics" class="d-none">
+                                                <small class="text-muted">Training Metrics:</small>
+                                                <div class="row text-center mt-2">
+                                                    <div class="col-6">
+                                                        <strong id="metric-accuracy">-</strong>
+                                                        <br><small>Accuracy</small>
+                                                    </div>
+                                                    <div class="col-6">
+                                                        <strong id="metric-precision">-</strong>
+                                                        <br><small>Precision</small>
+                                                    </div>
+                                                    <div class="col-6">
+                                                        <strong id="metric-recall">-</strong>
+                                                        <br><small>Recall</small>
+                                                    </div>
+                                                    <div class="col-6">
+                                                        <strong id="metric-f1">-</strong>
+                                                        <br><small>F1-Score</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Synthetic Data Section -->
+                <div id="synthetic-section" class="content-section d-none">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="mb-0"><i class="bi bi-magic"></i> Synthetic Data Generator</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <h6>Generation Parameters</h6>
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label">Number of Samples</label>
+                                            <input type="number" class="form-control" min="100" max="10000" value="1000" step="100" id="num-samples">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Fraud Ratio</label>
+                                            <input type="range" class="form-range" min="0.01" max="0.5" step="0.01" value="0.1" id="fraud-ratio-range">
+                                            <small class="text-muted">Value: <span id="fraud-ratio-value">0.10</span></small>
+                                        </div>
+                                    </div>
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label">Dataset Type</label>
+                                            <select class="form-select" id="dataset-type">
+                                                <option value="Credit Card">Credit Card</option>
+                                                <option value="Mobile Money">Mobile Money</option>
+                                                <option value="Debit Card">Debit Card</option>
+                                                <option value="Mixed">Mixed</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Amount Range ($)</label>
+                                            <div class="d-flex gap-2">
+                                                <input type="number" class="form-control" placeholder="Min" value="10" id="amount-min">
+                                                <input type="number" class="form-control" placeholder="Max" value="5000" id="amount-max">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row mb-3">
+                                        <div class="col-md-4">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" checked id="include-anomalies">
+                                                <label class="form-check-label" for="include-anomalies">
+                                                    Include Anomalies
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" checked id="seasonal-patterns">
+                                                <label class="form-check-label" for="seasonal-patterns">
+                                                    Seasonal Patterns
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" checked id="correlation-features">
+                                                <label class="form-check-label" for="correlation-features">
+                                                    Correlated Features
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button type="button" class="btn btn-info" id="generate-synthetic-btn">
+                                        <i class="bi bi-magic"></i> Generate Synthetic Data
+                                    </button>
+                                </div>
+                                
+                                <div class="col-md-4">
+                                    <div class="card border-0 bg-light">
+                                        <div class="card-body">
+                                            <h6><i class="bi bi-lightbulb"></i> Generator Features</h6>
+                                            <ul class="small text-muted">
+                                                <li>Realistic transaction patterns</li>
+                                                <li>Fraud indicators based on research</li>
+                                                <li>Multiple dataset types support</li>
+                                                <li>Configurable fraud ratios</li>
+                                                <li>Anomaly detection features</li>
+                                                <li>Seasonal and temporal patterns</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Generated Data Results -->
+                            <div id="synthetic-results" class="d-none mt-4">
+                                <hr>
+                                <div class="row mb-3">
+                                    <div class="col-md-4">
+                                        <div class="card border-0 bg-primary text-white text-center">
+                                            <div class="card-body py-2">
+                                                <h4 id="synthetic-total">-</h4>
+                                                <small>Total Samples</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="card border-0 bg-danger text-white text-center">
+                                            <div class="card-body py-2">
+                                                <h4 id="synthetic-fraud">-</h4>
+                                                <small>Fraud Samples</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="card border-0 bg-warning text-white text-center">
+                                            <div class="card-body py-2">
+                                                <h4 id="synthetic-ratio">-</h4>
+                                                <small>Actual Ratio</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="d-flex gap-2 mb-3">
+                                    <button type="button" class="btn btn-outline-success" id="download-synthetic-btn">
+                                        <i class="bi bi-download"></i> Download CSV
+                                    </button>
+                                    <button type="button" class="btn btn-success" id="use-synthetic-btn">
+                                        <i class="bi bi-arrow-right"></i> Use for Training
+                                    </button>
+                                </div>
+                                
+                                <h6>Generated Data Preview</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-striped" id="synthetic-table">
+                                        <thead class="table-dark"></thead>
+                                        <tbody></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Predictions Section -->
+                <div id="predictions-section" class="content-section d-none">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-dark text-white">
+                            <h5 class="mb-0"><i class="bi bi-bullseye"></i> Model Predictions</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <h6>Run Predictions on Current Dataset</h6>
+                                <button type="button" class="btn btn-dark" id="run-predictions-btn" disabled>
+                                    <i class="bi bi-play-circle"></i> Run Predictions
+                                </button>
+                            </div>
+                            
+                            <!-- Prediction Results -->
+                            <div id="prediction-results" class="d-none">
+                                <!-- Metrics -->
+                                <div class="row mb-4" id="prediction-metrics">
+                                    <div class="col-md-3">
+                                        <div class="card border-0 bg-primary text-white text-center">
+                                            <div class="card-body py-2">
+                                                <h4 id="pred-accuracy">-</h4>
+                                                <small>Accuracy</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="card border-0 bg-success text-white text-center">
+                                            <div class="card-body py-2">
+                                                <h4 id="pred-precision">-</h4>
+                                                <small>Precision</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="card border-0 bg-warning text-white text-center">
+                                            <div class="card-body py-2">
+                                                <h4 id="pred-recall">-</h4>
+                                                <small>Recall</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="card border-0 bg-info text-white text-center">
+                                            <div class="card-body py-2">
+                                                <h4 id="pred-f1">-</h4>
+                                                <small>F1-Score</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- High Risk Transactions -->
+                                <div class="mt-4">
+                                    <h6><i class="bi bi-exclamation-triangle text-danger"></i> High Risk Predictions (>70% probability)</h6>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-striped" id="predictions-table">
+                                            <thead class="table-danger"></thead>
+                                            <tbody></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container position-fixed top-0 end-0 p-3">
+        <div id="toast" class="toast" role="alert">
+            <div class="toast-header">
+                <i class="bi bi-info-circle me-2"></i>
+                <strong class="me-auto">XposeAI</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+            </div>
+            <div class="toast-body"></div>
+        </div>
+    </div>
+
+    <!-- Loading Modal -->
+    <div class="modal fade" id="loading-modal" data-bs-backdrop="static" tabindex="-1">
+        <div class="modal-dialog modal-sm modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-body text-center py-4">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <div class="mt-3" id="loading-text">Processing...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Custom JS -->
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
