@@ -1,0 +1,26 @@
+# This file represents a placeholder for the pretrained model
+# In a real implementation, this would be a serialized scikit-learn model
+# For this demo, we'll create a basic model when needed
+
+import joblib
+import numpy as np
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.preprocessing import StandardScaler
+
+def create_pretrained_model():
+    """Create a basic pretrained model for demonstration."""
+    # Create a simple Random Forest model
+    model = RandomForestClassifier(n_estimators=50, random_state=42)
+    
+    # Train on dummy data
+    X_dummy = np.random.rand(1000, 10)
+    y_dummy = np.random.choice([0, 1], size=1000, p=[0.9, 0.1])
+    
+    model.fit(X_dummy, y_dummy)
+    
+    return model
+
+# Save the model
+if __name__ == "__main__":
+    model = create_pretrained_model()
+    joblib.dump(model, 'models/pretrained_model.joblib')
