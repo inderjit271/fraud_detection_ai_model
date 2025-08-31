@@ -40,20 +40,17 @@ async def dashboard(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
 @app.post("/upload_csv")
-async def upload_csv(file: UploadFile = File(...)):
+async def upload_csv(uploaded_file: UploadFile = File(...)):
     """Upload and validate CSV file"""
     try:
         # Validate file
-        contents = await file.read()
-        if len(contents) > 50 * 1024 * 1024:  # 50MB limit
-            raise HTTPException(status_code=400, detail="File size too large (max 50MB)")
-        
-        if not file.filename.lower().endswith('.csv'):
-            raise HTTPException(status_code=400, detail="Invalid file format. Please upload CSV file")
-        
-        # Read CSV
-        df = pd.read_csv(io.StringIO(contents.decode('utf-8')))
-        
+        if not uploaded_file.filename.lower().endswith('.csv'):
+            raise HTTPException(status_code=400, detail="Invalid file format. Please upload a CSV file")
+
+        # ✅ Read CSV in chunks (no size limit)
+        df_chunks = pd.read_csv(uploaded_file.file, chunksize=100000, low_memory=False)
+        df = pd.concat(df_chunks, ignore_index=True)
+
         if df.empty:
             raise HTTPException(status_code=400, detail="Uploaded file is empty")
         
@@ -79,6 +76,7 @@ async def upload_csv(file: UploadFile = File(...)):
         
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Upload failed: {str(e)}")
+
 
 @app.post("/analyze_data")
 async def analyze_data():

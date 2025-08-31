@@ -71,8 +71,11 @@ def data_upload_section():
                     st.error(message)
                     return
                 
-                # Load data
-                data = pd.read_csv(uploaded_file)
+                # Load data in chunks so large files don't crash
+                data = pd.concat(
+                    pd.read_csv(uploaded_file, chunksize=100000, low_memory=False),
+                    ignore_index=True
+                )
                 st.success(f"✅ File uploaded successfully! Shape: {data.shape}")
                 
                 # Display sample data
